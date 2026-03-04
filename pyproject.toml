@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-azure-storage"
+version = "0.1.0"
+description = "MCP server for Azure Data Lake Storage file discovery"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0.0",
+    "azure-storage-file-datalake>=12.14.0",
+    "azure-identity>=1.17.0",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+mcp-azure-storage = "mcp_azure_storage.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_azure_storage"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
