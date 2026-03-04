@@ -8,7 +8,8 @@ Collection of Python MCP (Model Context Protocol) servers for use with any MCP-c
 
 | Server | Description |
 |---|---|
-| [`mcp_azure_storage`](src/mcp_azure_storage/README.md) | Discover and inspect files in Azure Data Lake Storage Gen2 |
+| [`mcp_azure_storage`](src/mcp_azure_storage/README.md) | Discover, inspect, read and write files in Azure Data Lake Storage Gen2 |
+| [`mcp_json`](src/mcp_json/README.md) | Analyse JSON content: search, JSONPath queries, describe structure, filter arrays |
 
 ---
 

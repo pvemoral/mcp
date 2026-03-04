@@ -3,34 +3,33 @@
 from functools import lru_cache
 
 from azure.identity import ClientSecretCredential, DefaultAzureCredential
+from azure.storage.blob import BlobServiceClient
 from azure.storage.filedatalake import DataLakeServiceClient
 
 from .config import settings
 
 
-@lru_cache(maxsize=1)
-def get_service_client() -> DataLakeServiceClient:
-    """Return a cached DataLakeServiceClient using the best available credential."""
-    url = settings.account_url
-
-    # Priority 1: SAS token
+def _credential():
+    """Build the best available credential (shared by both clients)."""
     if settings.sas_token:
-        return DataLakeServiceClient(
-            account_url=url,
-            credential=settings.sas_token,
-        )
-
-    # Priority 2: service principal
+        return settings.sas_token
     if settings.tenant_id and settings.client_id and settings.client_secret:
-        credential = ClientSecretCredential(
+        return ClientSecretCredential(
             tenant_id=settings.tenant_id,
             client_id=settings.client_id,
             client_secret=settings.client_secret,
         )
-        return DataLakeServiceClient(account_url=url, credential=credential)
+    return DefaultAzureCredential()
 
-    # Priority 3: DefaultAzureCredential (managed identity, az login, env vars…)
-    return DataLakeServiceClient(
-        account_url=url,
-        credential=DefaultAzureCredential(),
-    )
+
+@lru_cache(maxsize=1)
+def get_service_client() -> DataLakeServiceClient:
+    """Return a cached DataLakeServiceClient (DFS endpoint) for read/list operations."""
+    return DataLakeServiceClient(account_url=settings.account_url, credential=_credential())
+
+
+@lru_cache(maxsize=1)
+def get_blob_service_client() -> BlobServiceClient:
+    """Return a cached BlobServiceClient (Blob endpoint) for write operations."""
+    blob_url = settings.account_url.replace(".dfs.", ".blob.")
+    return BlobServiceClient(account_url=blob_url, credential=_credential())

@@ -8,12 +8,21 @@ import mcp.types as types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
-from .datalake import get_file_info, list_filesystems, search_by_name, search_by_properties
+from .datalake import (
+    get_file_info,
+    list_filesystems,
+    read_json_file,
+    search_by_name,
+    search_by_properties,
+    write_json_file,
+)
 from .models import (
     GetFileInfoInput,
     ListFilesystemsInput,
+    ReadJsonFileInput,
     SearchByNameInput,
     SearchByPropertiesInput,
+    WriteJsonFileInput,
 )
 
 logging.basicConfig(
@@ -65,6 +74,23 @@ async def list_tools() -> list[types.Tool]:
             ),
             inputSchema=SearchByPropertiesInput.model_json_schema(),
         ),
+        types.Tool(
+            name="read_json_file",
+            description=(
+                "Download and return the parsed content of a JSON file from the Data Lake. "
+                "Use max_size_kb to guard against reading unexpectedly large files."
+            ),
+            inputSchema=ReadJsonFileInput.model_json_schema(),
+        ),
+        types.Tool(
+            name="write_json_file",
+            description=(
+                "Write or overwrite a JSON file in the Data Lake. "
+                "The content must be a JSON object or array. "
+                "Set overwrite=true to replace an existing file."
+            ),
+            inputSchema=WriteJsonFileInput.model_json_schema(),
+        ),
     ]
 
 
@@ -103,6 +129,14 @@ async def _dispatch(name: str, arguments: dict):
         params = SearchByPropertiesInput.model_validate(arguments)
         files = search_by_properties(params)
         return [f.model_dump_display() for f in files]
+
+    if name == "read_json_file":
+        params = ReadJsonFileInput.model_validate(arguments)
+        return read_json_file(params)
+
+    if name == "write_json_file":
+        params = WriteJsonFileInput.model_validate(arguments)
+        return write_json_file(params)
 
     raise ValueError(f"Unknown tool: {name}")
 

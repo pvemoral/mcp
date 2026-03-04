@@ -1,15 +1,23 @@
 """Business logic: querying Azure Data Lake Storage Gen2."""
 
 import fnmatch
+import json
 import os
 from datetime import datetime, timezone
 
 from azure.core.exceptions import ResourceNotFoundError
 from azure.storage.filedatalake import FileSystemClient
 
-from .client import get_service_client
+from .client import get_blob_service_client, get_service_client
 from .config import settings
-from .models import FileInfo, GetFileInfoInput, SearchByNameInput, SearchByPropertiesInput
+from .models import (
+    FileInfo,
+    GetFileInfoInput,
+    ReadJsonFileInput,
+    SearchByNameInput,
+    SearchByPropertiesInput,
+    WriteJsonFileInput,
+)
 
 
 def _resolve_filesystem(filesystem: str | None) -> str:
@@ -107,6 +115,39 @@ def search_by_name(params: SearchByNameInput) -> list[FileInfo]:
             results.append(_path_to_file_info(filesystem, raw))
 
     return results
+
+
+def read_json_file(params: ReadJsonFileInput) -> dict | list:
+    filesystem = _resolve_filesystem(params.filesystem)
+    client = get_service_client()
+    fs_client = client.get_file_system_client(filesystem)
+    file_client = fs_client.get_file_client(params.path)
+
+    try:
+        props = file_client.get_file_properties()
+        size = props.size or 0
+        max_bytes = params.max_size_kb * 1024
+        if size > max_bytes:
+            raise ValueError(
+                f"File is {size // 1024} KB, exceeds limit of {params.max_size_kb} KB. "
+                "Increase max_size_kb to read it."
+            )
+        return json.loads(file_client.download_file().readall())
+    except ResourceNotFoundError:
+        raise FileNotFoundError(f"File not found: {params.path} in {filesystem}")
+
+
+def write_json_file(params: WriteJsonFileInput) -> dict:
+    filesystem = _resolve_filesystem(params.filesystem)
+    blob_client = get_blob_service_client().get_blob_client(container=filesystem, blob=params.path)
+
+    content_bytes = json.dumps(params.content, ensure_ascii=False, indent=2).encode("utf-8")
+    blob_client.upload_blob(
+        content_bytes,
+        overwrite=params.overwrite,
+        content_type="application/json",
+    )
+    return {"path": params.path, "filesystem": filesystem, "bytes_written": len(content_bytes)}
 
 
 def search_by_properties(params: SearchByPropertiesInput) -> list[FileInfo]:

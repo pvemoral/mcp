@@ -119,3 +119,36 @@ class GetFileInfoInput(BaseModel):
 
 
 SizeUnit = Literal["bytes", "kb", "mb"]
+
+
+class ReadJsonFileInput(BaseModel):
+    path: str = Field(
+        description="Full path of the JSON file within the filesystem.",
+    )
+    filesystem: str | None = Field(
+        default=None,
+        description="Container / filesystem name. Uses AZURE_STORAGE_FILESYSTEM if omitted.",
+    )
+    max_size_kb: int = Field(
+        default=1024,
+        ge=1,
+        le=10240,
+        description="Safety limit: raise an error if the file exceeds this size in KB.",
+    )
+
+
+class WriteJsonFileInput(BaseModel):
+    path: str = Field(
+        description="Full path to write the JSON file within the filesystem.",
+    )
+    content: dict | list = Field(
+        description="JSON content to write (object or array).",
+    )
+    filesystem: str | None = Field(
+        default=None,
+        description="Container / filesystem name. Uses AZURE_STORAGE_FILESYSTEM if omitted.",
+    )
+    overwrite: bool = Field(
+        default=False,
+        description="Overwrite the file if it already exists.",
+    )
