@@ -119,12 +119,10 @@ def search_by_name(params: SearchByNameInput) -> list[FileInfo]:
 
 def read_json_file(params: ReadJsonFileInput) -> dict | list:
     filesystem = _resolve_filesystem(params.filesystem)
-    client = get_service_client()
-    fs_client = client.get_file_system_client(filesystem)
-    file_client = fs_client.get_file_client(params.path)
+    blob_client = get_blob_service_client().get_blob_client(container=filesystem, blob=params.path)
 
     try:
-        props = file_client.get_file_properties()
+        props = blob_client.get_blob_properties()
         size = props.size or 0
         max_bytes = params.max_size_kb * 1024
         if size > max_bytes:
@@ -132,7 +130,7 @@ def read_json_file(params: ReadJsonFileInput) -> dict | list:
                 f"File is {size // 1024} KB, exceeds limit of {params.max_size_kb} KB. "
                 "Increase max_size_kb to read it."
             )
-        return json.loads(file_client.download_file().readall())
+        return json.loads(blob_client.download_blob().readall())
     except ResourceNotFoundError:
         raise FileNotFoundError(f"File not found: {params.path} in {filesystem}")
 
